@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   Clock,
   Sun,
@@ -7,8 +7,6 @@ import {
   CloudSun,
 } from "phosphor-react";
 import { formatTo12Hour } from "../utils/formatTo12Hour";
-
-
 interface Props {
   prayerName: string;
   nextIn: string;
@@ -16,7 +14,7 @@ interface Props {
   active: string;
   day: string;
   passedPrayersCount: number;
-  segmentProgress: number;
+  segmentProgress: number; // Value from 0 to 1
 }
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -44,6 +42,15 @@ const PrayerCard = ({
   passedPrayersCount,
   segmentProgress,
 }: Props) => {
+  const currentPathRef = useRef<SVGPathElement | null>(null);
+  const [pathLength, setPathLength] = useState(0);
+
+  useEffect(() => {
+    if (currentPathRef.current) {
+      setPathLength(currentPathRef.current.getTotalLength());
+    }
+  }, [passedPrayersCount]);
+
   return (
     <div
       className={`rounded-2xl p-4 text-white w-full max-w-sm shadow-lg bg-gradient-to-br ${gradientMap[prayerName]}`}
@@ -97,25 +104,64 @@ const PrayerCard = ({
             const endX = centerX + radius * Math.cos(endAngle);
             const endY = centerY + radius * Math.sin(endAngle);
 
-            const isFilled = i < passedPrayersCount;
-            const isCurrent = i === passedPrayersCount;
-
             const path = `
               M ${startX} ${startY}
               A ${radius} ${radius} 0 0 1 ${endX} ${endY}
             `;
 
-            return (
-              <path
-                key={i}
-                d={path}
-                fill="none"
-                stroke={isFilled || isCurrent ? "white" : "#E5E7EB"}
-                strokeWidth="13"
-                strokeLinecap="round"
-                style={{ transition: "stroke 0.3s ease" }}
-              />
-            );
+            const isFilled = i < passedPrayersCount;
+            const isCurrent = i === passedPrayersCount;
+
+            if (isFilled) {
+              return (
+                <path
+                  key={i}
+                  d={path}
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="13"
+                  strokeLinecap="round"
+                />
+              );
+            } else if (isCurrent) {
+              return (
+                <g key={i}>
+                  {/* Background of current segment */}
+                  <path
+                    d={path}
+                    fill="none"
+                    stroke="#E5E7EB"
+                    strokeWidth="13"
+                    strokeLinecap="round"
+                  />
+                  {/* Progress path */}
+                  <path
+                    ref={currentPathRef}
+                    d={path}
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="13"
+                    strokeLinecap="round"
+                    strokeDasharray={pathLength}
+                    strokeDashoffset={pathLength * (1 - segmentProgress)}
+                    style={{
+                      transition: "stroke-dashoffset 0.3s ease",
+                    }}
+                  />
+                </g>
+              );
+            } else {
+              return (
+                <path
+                  key={i}
+                  d={path}
+                  fill="none"
+                  stroke="#E5E7EB"
+                  strokeWidth="13"
+                  strokeLinecap="round"
+                />
+              );
+            }
           })}
         </svg>
       </div>
