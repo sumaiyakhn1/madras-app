@@ -10,42 +10,55 @@ function App() {
   const [day, setDay] = useState<string>("");
   const [location, setLocation] = useState<string>("Detecting location...");
 
-  // 📍 Get location + fetch timings
   useEffect(() => {
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
+    const fetchLocationAndTimings = async () => {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
 
-        try {
-          const { city, country } = await reverseGeocode(latitude, longitude);
-          setLocation(`${city}, ${country}`);
+          try {
+            const getCurrentDate = () => {
+              const today = new Date();
+              const day = String(today.getDate()).padStart(2, '0');
+              const month = String(today.getMonth() + 1).padStart(2, '0');
+              const year = today.getFullYear();
+              return `${day}-${month}-${year}`;
+            }; 
+            const { city, country } = await reverseGeocode(latitude, longitude);
+            const address = `${city}, ${country}`;
+            setLocation(address);
+            
 
-          // Fetch timings using real city and country
-          const res = await fetch(
-            `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}`
-          );
-          const data = await res.json();
-          const times = data.data.timings;
+            const currentDate = getCurrentDate();
+            const encodedAddress = encodeURIComponent(address);
+            
+            const res = await fetch(
+              `https://api.aladhan.com/v1/timingsByAddress/${currentDate}?address=${encodedAddress}&method=8&tune=2,3,4,5,2,3,4,5,-3`
+            );
+            const data = await res.json();
+            const times = data.data.timings;
 
-          setTimings({
-            Fajr: times.Fajr,
-            Dhuhr: times.Dhuhr,
-            Asr: times.Asr,
-            Maghrib: times.Maghrib,
-            Isha: times.Isha,
-          });
+            setTimings({
+              Fajr: times.Fajr,
+              Dhuhr: times.Dhuhr,
+              Asr: times.Asr,
+              Maghrib: times.Maghrib,
+              Isha: times.Isha,
+            });
 
-          const today = new Date();
-          const weekday = today.toLocaleDateString("en-US", { weekday: "long" });
-          setDay(weekday);
-        } catch {
-          setLocation("Location unavailable");
+            const weekday = new Date().toLocaleDateString("en-US", { weekday: "long" });
+            setDay(weekday);
+          } catch {
+            setLocation("Location unavailable");
+          }
+        },
+        () => {
+          setLocation("Permission denied");
         }
-      },
-      () => {
-        setLocation("Permission denied");
-      }
-    );
+      );
+    };
+
+    fetchLocationAndTimings();
   }, []);
 
   if (!timings || !day) return <div className="text-center mt-10">Loading...</div>;
@@ -58,20 +71,18 @@ function App() {
   } = getNextPrayer(timings);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col justify-between">
-      {/* Sticky Top Bar */}
-      <div className="sticky top-0 bg-white shadow-md px-4 py-3 flex items-center justify-between z-10">
+    <div className="relative min-h-screen bg-gray-100 pb-20">
+      {/* Sticky Navbar */}
+      <div className="sticky top-0 z-10 bg-white shadow-md py-3 px-4 flex justify-between items-center">
         <div className="flex items-center gap-2 font-bold text-purple-700">
-          <img src="/logo.jpg" alt="Logo" className="h-6 w-auto" />
+          <img src="/logo.jpg" alt="Logo" className="h-6" />
           <span className="text-lg">madrasa</span>
         </div>
-        <div className="text-xs text-gray-600 truncate max-w-[150px] text-right">
-          📍 {location}
-        </div>
+        <div className="text-xs text-gray-600 truncate max-w-[60%]">📍 {location}</div>
       </div>
 
-      {/* Main Prayer Card */}
-      <div className="flex-grow flex items-center justify-center p-4">
+      {/* Prayer Card Centered */}
+      <div className="flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-xl w-full max-w-md p-4">
           <PrayerCard
             prayerName={nextPrayer}
@@ -85,10 +96,8 @@ function App() {
         </div>
       </div>
 
-      {/* Mobile-Only Bottom Nav */}
-      <div className="block md:hidden">
-        <BottomNav />
-      </div>
+      {/* Mobile Footer */}
+      <BottomNav />
     </div>
   );
 }
