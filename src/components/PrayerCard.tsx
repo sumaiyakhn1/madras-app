@@ -6,6 +6,8 @@ import {
   SunDim,
   CloudSun,
 } from "phosphor-react";
+import { formatTo12Hour } from "../utils/formatTo12Hour";
+
 
 interface Props {
   prayerName: string;
@@ -42,15 +44,11 @@ const PrayerCard = ({
   passedPrayersCount,
   segmentProgress,
 }: Props) => {
-  const safeProgress = Math.min(
-    (passedPrayersCount + segmentProgress) / 5,
-    0.999
-  );
-
   return (
     <div
       className={`rounded-2xl p-4 text-white w-full max-w-sm shadow-lg bg-gradient-to-br ${gradientMap[prayerName]}`}
     >
+      {/* Header */}
       <div className="flex justify-between items-start">
         <div>
           <h2 className="text-lg font-bold flex items-center gap-1">
@@ -72,57 +70,54 @@ const PrayerCard = ({
           >
             <div className="mb-1">{iconMap[name]}</div>
             <p>{name}</p>
-            <p>{time}</p>
+            <p>{formatTo12Hour(time)}</p>
           </div>
         ))}
       </div>
 
       {/* Progress Arc */}
-      <div className="mt-6 w-full h-24 relative overflow-hidden">
-      <svg viewBox="0 0 100 50" className="w-full h-full">
-  {Array.from({ length: 5 }).map((_, i) => {
-    const startAngle = 180 * (i / 5);
-    const endAngle = 180 * ((i + 1) / 5);
-    const radius = 40;
-    const centerX = 50;
-    const centerY = 50;
+      <div className="mt-2 w-full h-40 relative pointer-events-none overflow-hidden">
+        <svg viewBox="0 0 300 150" className="w-full h-full">
+          {Array.from({ length: 5 }).map((_, i) => {
+            const radius = 130;
+            const centerX = 150;
+            const centerY = 150;
+            const totalSegments = 5;
+            const gapDeg = 6;
+            const gapAngle = (gapDeg * Math.PI) / 180;
+            const totalArc = Math.PI;
+            const totalGap = gapAngle * (totalSegments - 1);
+            const arcAngle = (totalArc - totalGap) / totalSegments;
 
-    const startX = centerX + radius * Math.cos((Math.PI * startAngle) / 180);
-    const startY = centerY + radius * Math.sin((Math.PI * startAngle) / 180);
-    const endX = centerX + radius * Math.cos((Math.PI * endAngle) / 180);
-    const endY = centerY + radius * Math.sin((Math.PI * endAngle) / 180);
+            const startAngle = Math.PI + i * (arcAngle + gapAngle);
+            const endAngle = startAngle + arcAngle;
 
-    const isFilled = i < passedPrayersCount;
-    const isCurrent = i === passedPrayersCount;
+            const startX = centerX + radius * Math.cos(startAngle);
+            const startY = centerY + radius * Math.sin(startAngle);
+            const endX = centerX + radius * Math.cos(endAngle);
+            const endY = centerY + radius * Math.sin(endAngle);
 
-    return (
-      <path
-        key={i}
-        d={`M ${startX} ${startY} A ${radius} ${radius} 0 0 1 ${endX} ${endY}`}
-        fill="none"
-        stroke={
-          isFilled
-            ? "white"
-            : isCurrent
-            ? "white"
-            : "rgba(255,255,255,0.2)"
-        }
-        strokeWidth="8"
-        strokeLinecap="round"
-        {...(isCurrent
-          ? {
-              strokeDasharray: `${125 / 5}`,
-              strokeDashoffset: `${125 / 5 * (1 - segmentProgress)}`,
-            }
-          : {})}
-        style={{
-          transition: "stroke-dashoffset 0.5s ease",
-        }}
-      />
-    );
-  })}
-</svg>
+            const isFilled = i < passedPrayersCount;
+            const isCurrent = i === passedPrayersCount;
 
+            const path = `
+              M ${startX} ${startY}
+              A ${radius} ${radius} 0 0 1 ${endX} ${endY}
+            `;
+
+            return (
+              <path
+                key={i}
+                d={path}
+                fill="none"
+                stroke={isFilled || isCurrent ? "white" : "#E5E7EB"}
+                strokeWidth="13"
+                strokeLinecap="round"
+                style={{ transition: "stroke 0.3s ease" }}
+              />
+            );
+          })}
+        </svg>
       </div>
     </div>
   );

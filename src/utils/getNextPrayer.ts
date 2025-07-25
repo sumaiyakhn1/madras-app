@@ -10,13 +10,12 @@ export const getNextPrayer = (timings: { [key: string]: string }) => {
   });
 
   let next = prayerTimes.find((p) => p.time > now);
-  let prev;
+  let prev: Date;
 
   if (!next) {
     const fajrTime = new Date(prayerTimes[0].time);
     fajrTime.setDate(fajrTime.getDate() + 1);
     next = { name: "Fajr", time: fajrTime };
-
     prev = prayerTimes[prayerTimes.length - 1].time;
   } else {
     const nextIndex = ordered.indexOf(next.name);
@@ -26,9 +25,7 @@ export const getNextPrayer = (timings: { [key: string]: string }) => {
 
   const totalGap = next.time.getTime() - prev.getTime();
   const timePassed = now.getTime() - prev.getTime();
-  let rawProgress = timePassed / totalGap;
-
-  // Clamp progress between 0 and just below 1
+  const rawProgress = timePassed / totalGap;
   const progress = Math.min(Math.max(rawProgress, 0), 0.999);
 
   const diffMs = next.time.getTime() - now.getTime();
