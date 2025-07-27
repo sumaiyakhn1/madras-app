@@ -9,39 +9,37 @@ export const getNextPrayer = (timings: { [key: string]: string }) => {
     return { name, time: date };
   });
 
-  let next = prayerTimes.find((p) => p.time > now);
-  let prev: Date;
+  let currentPrayer = "Isha";
+  let nextPrayer = "Fajr";
 
-  if (!next) {
-    const fajrTime = new Date(prayerTimes[0].time);
-    fajrTime.setDate(fajrTime.getDate() + 1);
-    next = { name: "Fajr", time: fajrTime };
-    prev = prayerTimes[prayerTimes.length - 1].time;
-  } else {
-    const nextIndex = ordered.indexOf(next.name);
-    const prevIndex = (nextIndex - 1 + ordered.length) % ordered.length;
-    prev = prayerTimes[prevIndex].time;
+  for (let i = 0; i < prayerTimes.length; i++) {
+    const start = prayerTimes[i].time;
+    const end = i < prayerTimes.length - 1 ? prayerTimes[i + 1].time : new Date(start.getTime() + 3 * 60 * 60 * 1000); // Isha ends in ~3 hours
+    if (now >= start && now < end) {
+      currentPrayer = prayerTimes[i].name;
+      nextPrayer = prayerTimes[i + 1]?.name || "Fajr";
+      break;
+    }
   }
 
-  const totalGap = next.time.getTime() - prev.getTime();
-  const timePassed = now.getTime() - prev.getTime();
-  const rawProgress = timePassed / totalGap;
-  const progress = Math.min(Math.max(rawProgress, 0), 0.999);
+  const current = prayerTimes.find(p => p.name === currentPrayer)!;
+  const next = prayerTimes.find(p => p.name === nextPrayer);
 
-  const diffMs = next.time.getTime() - now.getTime();
+  const totalGap = (next?.time.getTime() || 0) - current.time.getTime();
+  const timePassed = now.getTime() - current.time.getTime();
+  const progress = Math.min(Math.max(timePassed / totalGap, 0), 0.999);
+
+  const diffMs = (next?.time.getTime() || 0) - now.getTime();
   const diffMin = Math.max(Math.floor(diffMs / 60000), 0);
   const hours = Math.floor(diffMin / 60);
   const minutes = diffMin % 60;
 
-  const passedPrayersCount = ordered.indexOf(next.name);
-  const segmentProgress = progress;
-
   return {
-    nextPrayer: next.name,
+    nextPrayer: currentPrayer,
     nextIn: `${hours}h ${minutes}m`,
     progress,
-    segmentIndex: passedPrayersCount,
-    segmentProgress,
-    passedPrayersCount,
+    segmentIndex: ordered.indexOf(currentPrayer),
+    segmentProgress: progress,
+    passedPrayersCount: ordered.indexOf(currentPrayer),
   };
 };
